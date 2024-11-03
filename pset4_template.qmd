@@ -53,6 +53,8 @@ import altair as alt
 
 ```{python}
 hospitals_2016 = pd.read_csv("/Users/kishikamahajan/Desktop/pos2016.csv")
+#hospitals_2016 = pd.read_csv("/Users/nidhi/Desktop/Data and Programming Python 2/POS_File_Hospital_Non_Hospital_Facilities_Q4_2016.csv")
+hospitals_2016.head()
 hospitals_2016.head()
 
 # Subsetting the hospitals
@@ -64,13 +66,15 @@ short_term_hospitals_2016["YEAR"] = 2016
 short_term_hospitals_2016.shape[0]
 ```
 
-    a. The number of hospitals reported in this data are 7245. 
-    b. # ADD ANSWER HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    a. The number of hospitals reported in this data are 7245. This number does seem to be pretty high
+    b. The American Hospital Association (AHA) reports around 6000 total hospitals in the U.S., with only about 5000 being community hospitals. The difference can be because there can be potential duplicates. The datatset might also include hospitals which have been closed. 
 
 3. Importing the datasets
 ```{python}
 # FOR 2017
 hospitals_2017 = pd.read_csv("/Users/kishikamahajan/Desktop/pos2017.csv")
+#hospitals_2017 = pd.read_csv("/Users/nidhi/Desktop/Data and Programming Python 2/POS_File_Hospital_Non_Hospital_Facilities_Q4_2017.csv")
+
 hospitals_2017.head()
 
 # Subsetting the hospitals
@@ -82,11 +86,12 @@ short_term_hospitals_2017["YEAR"] = 2017
 print(f"The short term hospitals in 2017 were {short_term_hospitals_2017.shape[0]}")
 ```
 
-# ADD ABOUT IF IT MAKES SENSE !!!!!!!!!!!!!!!!!!!!!!!!
+The same logic about the number of hospitals applies from above. 
 
 ```{python}
 # FOR 2018
 hospitals_2018 = pd.read_csv("/Users/kishikamahajan/Desktop/pos2018.csv" , encoding="ISO-8859-1")
+#hospitals_2018 = pd.read_csv("/Users/nidhi/Desktop/Data and Programming Python 2/POS_File_Hospital_Non_Hospital_Facilities_Q4_2018.csv" , encoding="ISO-8859-1")
 hospitals_2018.head()
 
 # Subsetting the hospitals
@@ -98,11 +103,12 @@ short_term_hospitals_2018["YEAR"] = 2018
 print(f"The short term hospitals in 2018 were {short_term_hospitals_2018.shape[0]}")
 ```
 
-# ADD ABOUT IF IT MAKES SENSE !!!!!!!!!!!!!!!!!!!!!!!!
+The same logic about the number of hospitals applies from above. 
 
 ```{python}
 # FOR 2019
 hospitals_2019 = pd.read_csv("/Users/kishikamahajan/Desktop/pos2019.csv" , encoding="ISO-8859-1")
+#hospitals_2019 = pd.read_csv("/Users/nidhi/Desktop/Data and Programming Python 2/POS_File_Hospital_Non_Hospital_Facilities_Q4_2019.csv" , encoding="ISO-8859-1")
 hospitals_2019.head()
 
 # Subsetting the hospitals
@@ -114,7 +120,7 @@ short_term_hospitals_2019["YEAR"] = 2019
 print(f"The short term hospitals in 2019 were {short_term_hospitals_2019.shape[0]}")
 ```
 
-# ADD ABOUT IF IT MAKES SENSE !!!!!!!!!!!!!!!!!!!!!!!!
+The same logic about the number of hospitals applies from above. 
 
 Appending the datasets together
 ```{python}
@@ -136,6 +142,7 @@ alt.Chart(hospitals_by_year).mark_bar().encode(
 
 
 4. Plotting the unique number of hospitals by year
+    a.
 ```{python}
 unique_hospitals_by_year = (
     combined_short_term_hospitals.groupby("YEAR")["PRVDR_NUM"].nunique().reset_index(name = "unique_hospitals")
@@ -148,43 +155,492 @@ alt.Chart(unique_hospitals_by_year).mark_bar().encode(
 )
 ```
 
-    a. # ADD ANSWER HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    b. # ADD ANSWER HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    b. As can be seen, the two plots are extremely similar. 
+    There is very little or no duplication of hospitals within each year. Hence, each hospital (identified by its CMS certification number) appears only once per year in the dataset.
 
 ## Identify hospital closures in POS file (15 pts) (*)
 
 1. 
+There are 174 hospitals that fit the definition.
+```{python}
+#Identifying unique column
+unique_columns = [col for col in short_term_hospitals_2016.columns if short_term_hospitals_2016[col].is_unique]
+print("Columns with all unique values:", unique_columns)
+```
+
+```{python}
+#Identifying unique column
+unique_columns = [col for col in short_term_hospitals_2016.columns if short_term_hospitals_2016[col].is_unique]
+print("Columns with all unique values:", unique_columns)
+```
+
+
+```{python}
+
+termination_active_2016 = short_term_hospitals_2016[short_term_hospitals_2016['PGM_TRMNTN_CD']==0]
+termination_active_2016
+
+termination_active_2016_s = termination_active_2016[['PGM_TRMNTN_CD', 'FAC_NAME', 'ZIP_CD','YEAR','PRVDR_NUM']]
+
+
+def terminated_hospitals(years, short_term_hospital_mapping):
+    # Empty list to store results
+    terminated_hospitals_list = []
+    
+    for year in years:
+        short_term_hospital_year = short_term_hospital_mapping[year]
+        
+        # Creating a subset of data by selecting columns
+        short_term_hospital_year_s = short_term_hospital_year[['PGM_TRMNTN_CD', 'FAC_NAME', 'ZIP_CD','YEAR','PRVDR_NUM']]
+        
+        # Merging the dataset with 2016 Active hospitals
+        merged_data_year = pd.merge(termination_active_2016_s, short_term_hospital_year_s, on='PRVDR_NUM', how='outer', indicator=True)
+        
+        # Filtering terminated hospitals
+        terminated_hospitals_year = merged_data_year[(merged_data_year['_merge'] == 'left_only') | ((merged_data_year['PGM_TRMNTN_CD_y'] != 0) & (merged_data_year['_merge'] == 'both' ))]
+        
+        # Store the results in the list
+        terminated_hospitals_list.append({
+            'year': year,
+            'terminated_hospitals': terminated_hospitals_year
+        })
+        
+    return terminated_hospitals_list
+
+# Define the years and the mapping of short-term hospitals
+years = [2017, 2018, 2019]
+
+short_term_hospitals_mapping = {
+    2017: short_term_hospitals_2017,
+    2018: short_term_hospitals_2018,
+    2019: short_term_hospitals_2019,
+}
+
+# Call the function
+terminated_hospitals_result = terminated_hospitals(years, short_term_hospitals_mapping)
+
+# Print the results
+for entry in terminated_hospitals_result:
+    print(f"Terminated hospitals for {entry['year']}:\n", entry['terminated_hospitals'])
+
+
+```
+
+
+```{python}
+all_terminated_hospitals = pd.concat([entry['terminated_hospitals'] for entry in terminated_hospitals_result], ignore_index=True)
+all_terminated_hospitals
+```
+
+```{python}
+#Group by FAC to check independent hospital closures
+
+test = all_terminated_hospitals.groupby('PRVDR_NUM').agg(
+    count =  ('PRVDR_NUM','count'),
+    ZIP_CD = ('ZIP_CD_x','first'),
+    YEAR = ('YEAR_y','first')
+)
+
+test
+print("Total number of terminated hospitals is",len(test))
+```
+
 2. 
+```{python}
+all_terminated_hospitals_1 = all_terminated_hospitals.sort_values(by='FAC_NAME_x', ascending=True)
+all_terminated_hospitals_2 = all_terminated_hospitals_1[['FAC_NAME_x','YEAR_y','ZIP_CD_x']]
+first_10_rows = all_terminated_hospitals_2.head(10)
+print("First 10 hospital name with year of suspected closure is:",first_10_rows)
+
+
+```
+
+
 3. 
-    a.
-    b.
-    c.
+```{python}
+def correct_for_mergers(closure_df, master_df):
+    """
+    Remove suspected closures that might be mergers/acquisitions
+    
+    Parameters:
+    closure_df: DataFrame containing suspected closures with columns:
+        - Provider Number
+        - Provider Name
+        - ZIP Code
+        - Closure Year
+    master_df: DataFrame containing all hospital data with columns:
+        - Provider Number
+        - ZIP Code
+        - Termination Code
+        - Year
+    
+    Returns:
+    DataFrame: Filtered closure list excluding likely mergers/acquisitions
+    """
+    # Calculate active hospitals per zip code per year from master data
+    zip_counts = {}
+    for year in master_df['YEAR'].unique():
+        active_hospitals = master_df[
+            (master_df['YEAR'] == year) & 
+            (master_df['PGM_TRMNTN_CD'] == 0)
+        ]
+        zip_counts[year] = active_hospitals.groupby('ZIP_CD').size()
+    
+    # Filter out potential mergers
+    valid_closures = []
+    
+    for _, closure in closure_df.iterrows():
+        zip_code = closure['ZIP_CD']
+        closure_year = closure['YEAR']
+        
+        # Get count of hospitals in zip code before and after closure
+        try:
+            pre_count = zip_counts[closure_year - 1].get(zip_code, 0)
+            post_count = zip_counts[closure_year].get(zip_code, 0)
+            
+            # Only keep if number of hospitals decreased
+            if post_count < pre_count:
+                valid_closures.append(closure)
+        except KeyError:
+            # If we don't have data for the year, skip this closure
+            print(f"Warning: Missing data for ZIP {zip_code} in year {closure_year}")
+            continue
+    
+    valid_closures_df = pd.DataFrame(valid_closures)
+    
+    # Add summary statistics
+    print(f"\nClosure Analysis Summary:")
+    print(f"Total suspected closures: {len(closure_df)}")
+    print(f"Confirmed closures: {len(valid_closures_df)}")
+    print(f"Potential mergers/acquisitions: {len(closure_df) - len(valid_closures_df)}")
+    
+    return valid_closures_df
+
+
+valid_closures = correct_for_mergers(test,combined_short_term_hospitals)
+valid_closures 
+
+```
 
 ## Download Census zip code shapefile (10 pt) 
 
 1. 
-    a.
+    a. The five file types are .dbf, .prj, .shp, .shx and .xml. 
+
+    **.shp (Shape Format):** 
+    ```{python}
+    # reading .shp
+    import geopandas as gpd
+    shapefile = gpd.read_file("/Users/kishikamahajan/Desktop/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.shp")
+    shapefile.head()
+    ```
+
+    This file contains the geometric data of the features. In particular, it contains information like the geo_id, name, census area and the coordinates of the polygon. 
+
+    **.shx (Shape Index Format):**
+    ```{python}
+    # reading .shx
+    shapeindex = gpd.read_file("/Users/kishikamahajan/Desktop/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.shx")
+    shapeindex.head()
+    ```
+
+    This file contains similar information as the shapefile but more generally, it provides a  positional index of the geometry. It helps locate specific geometries quickly within the .shp file.
+    
+    **.dbf (Attribute Format):**
+    ```{python}
+    # reading .dbf
+    attributefile = gpd.read_file("/Users/kishikamahajan/Desktop/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.dbf")
+    attributefile.head()
+    ```
+
+    While the information is the same, this file contains attribute data for each feature, stored in tabular format. It includes columns with each attribute associated with the data.  
+    
+    **.prj (Projection Format):** 
+    ```{python}
+    # reading .prj
+    from pyproj import CRS
+
+    with open("/Users/kishikamahajan/Desktop/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.prj", "r") as prj_file:
+        prj_text = prj_file.read()
+        crs = CRS.from_wkt(prj_text)
+
+    print(f"The CRS of the file is {crs}")
+    ```
+
+    The projection file defines the coordinate system and projection information for the shapefile which is essential for accurately mapping spatial data. It ensures that spatial data aligns correctly with other geographic layers. 
+
+    **.xml (Metadata format):**
+    The .xml file in a shapefile set contains metadata about the dataset, offering detailed information about the data's contents, source, creation, and structure. 
+
     b. 
-2. 
+    **.shp:** 
+    ```{python}
+    import os
+
+    file_path_shp = "/Users/kishikamahajan/Desktop/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.shp"
+    file_size_shp = os.path.getsize(file_path_shp)
+    file_size_shp_mb = file_size_shp / (1024 * 1024)
+
+    print(f"File size of shapefile: {file_size_shp_mb:.2f} MB")
+    ```
+
+    **.shx:** 
+    ```{python}
+    file_path_shx = "/Users/kishikamahajan/Desktop/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.shx"
+    file_size_shx = os.path.getsize(file_path_shx)
+    file_size_shx_mb = file_size_shx / (1024 * 1024)
+
+    print(f"File size of shx: {file_size_shx_mb:.2f} MB")
+    ```
+
+    **.dbf:** 
+    ```{python}
+    file_path_dbf = "/Users/kishikamahajan/Desktop/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.dbf"
+    file_size_dbf = os.path.getsize(file_path_dbf)
+    file_size_dbf_mb = file_size_dbf / (1024 * 1024)
+
+    print(f"File size of dbf: {file_size_dbf_mb:.2f} MB")
+    ```
+
+    **.prj:** 
+    ```{python}
+    file_path_prj = "/Users/kishikamahajan/Desktop/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.prj"
+    file_size_prj = os.path.getsize(file_path_prj)
+    file_size_prj_kb = file_size_prj / 1024
+
+    print(f"File size of prj: {file_size_prj_kb:.2f} KB")
+    ```
+
+    **.xml:** This file is 16 KB. 
+    ```{python}
+    file_path_xml = "/Users/kishikamahajan/Desktop/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.xml"
+    file_size_xml = os.path.getsize(file_path_xml)
+    file_size_xml_kb = file_size_xml / 1024
+
+    print(f"File size of xml: {file_size_xml_kb:.2f} KB")
+    ```
+
+2. Restricting zipcodes only to Texas by including only those zipcodes that start with "75", "76", "77", "78", "79"
+```{python}
+# keeping only those observations in shapefiles which start with the above
+
+texas_zip_codes = shapefile[shapefile["ZCTA5"].str.startswith(("75", "76", "77", "78", "79", "718", "885", "733"))]
+texas_zip_codes = texas_zip_codes.rename(columns={"ZCTA5": "ZIP_CD"})
+texas_zip_codes.head()
+```
+
+```{python}
+# Convert ZIP_CD to string and remove decimals
+short_term_hospitals_2016["ZIP_CD"] = short_term_hospitals_2016["ZIP_CD"].astype(str).str.split('.').str[0]
+    
+# Clean up the Texas shapefile ZIP codes
+texas_zip_codes["ZIP_CD"] = texas_zip_codes["ZIP_CD"].astype(str)
+
+# grouping short term hospitals on the basis of zipcodes
+short_term_hospitals_2016_grouped = short_term_hospitals_2016.groupby("ZIP_CD").size().reset_index(name = "count")
+
+# merging texas zipcodes with short term hospitals
+texas_hospitals_geo = texas_zip_codes.merge(short_term_hospitals_2016_grouped, on = "ZIP_CD", how = "left")
+
+texas_hospitals_geo.plot(column = "count", legend = True).set_axis_off()
+```
 
 ## Calculate zip code’s distance to the nearest hospital (20 pts) (*)
 
-1. 
-2. 
+1. Calculating the zipcode centroids
+```{python}
+zips_all_centroids = shapefile.copy()
+zips_all_centroids["geometry"] = zips_all_centroids.geometry.centroid
+zips_all_centroids = zips_all_centroids.reset_index(drop=True)
+```
+
+```{python}
+# Viewing the dimensions
+dimensions = zips_all_centroids.shape
+columns = zips_all_centroids.columns
+
+print("Dimensions of the GeoDataFrame:", dimensions)
+print("Columns in the GeoDataFrame:", columns)
+```
+
+Meaning of columns: 
+
+**GEO_ID:** This is a unique identifier for each ZIP code area in the dataset. 
+**ZCTA5:** This represents the zipcode. 
+**NAME:** This is a reptition of the previous column and essentially shows the zipcode again. 
+**LSAD:** This stands for Legal/Statistical Area Description and describes the type of area that the ZIP code represents. In this case, it is labeled as ZCTA5, indicating that it is a standard ZIP Code Tabulation Area.
+**CENSUSAREA:** This column indicates the area size of the ZIP code regions.
+**geometry:** This contains the geometric representation of the ZIP code's centroid. 
+
+2. Making a subset of zipcodes in Texas
+```{python}
+zips_texas_centroids = zips_all_centroids[zips_all_centroids["ZCTA5"].str.startswith(("75", "76", "77", "78", "79", "718", "885", "733"))]
+
+unique_texas_zipcodes_count = zips_texas_centroids["ZCTA5"].nunique()
+print(f"The number of unique zipcodes are {unique_texas_zipcodes_count}")
+```
+
+Making a subset of zipcodes in Texas and in bordering states
+```{python}
+zips_texas_borderstates_centroids = zips_all_centroids[zips_all_centroids["ZCTA5"].str.startswith(("75", "76", "77", "78", "79", "718", "885", "733", "70", "71", "72", "73", "87", "88"))]
+
+unique_texas_bs_zipcodes_count = zips_texas_borderstates_centroids["ZCTA5"].nunique()
+print(f"The number of unique zipcodes are {unique_texas_bs_zipcodes_count}")
+```
+
 3. 
+
+```{python}
+# getting short-term active hospitals in 2016
+active_2016 = short_term_hospitals_2016[short_term_hospitals_2016['PGM_TRMNTN_CD']==0]
+
+active_2016_grouped = active_2016.groupby("ZIP_CD").size().reset_index(name = "count")
+
+zips_withhospital_centroids = zips_texas_borderstates_centroids.merge(active_2016_grouped, left_on='ZCTA5', right_on='ZIP_CD',  how='inner')
+```
+
+I decided to do an inner merge and I merged it on the basis of the zipcode column. 
+
 4. 
-    a.
-    b.
+    a. Subsetting to 10 zipcodes
+    ```{python}
+    import time 
+
+    zips_texas_centroids = zips_texas_centroids.to_crs(epsg=2272)
+    zips_withhospital_centroids = zips_withhospital_centroids.to_crs(epsg=2272)
+
+    zips_texas_centroids_subset = zips_texas_centroids.sample(n=10)
+
+    start_time = time.time()
+
+    nearest_hospitals = gpd.sjoin_nearest(
+    zips_texas_centroids_subset, 
+    zips_withhospital_centroids, 
+    how='inner',   
+    distance_col="distance") 
+
+    end_time = time.time()
+
+    time_taken = end_time - start_time
+
+    print("Time taken for 10 zipcodes:" , time_taken,"seconds.")
+    ```
+
+    For the entire dataset it will take approximately:
+    ```{python}
+    time_approx = (zips_texas_centroids.shape[0]/10)*time_taken
+    print("Approx time that should be taken for the whole dataset:" , time_approx , "seconds.")
+    ```
+
+    b. Doing this on the whole dataset
+    ```{python}
+    start_time = time.time()
+
+    nearest_hospitals = gpd.sjoin_nearest(
+    zips_texas_centroids, 
+    zips_withhospital_centroids, 
+    how='inner',   
+    distance_col="distance") 
+
+    end_time = time.time()
+
+    time_taken = end_time - start_time
+
+    print("Time taken for all zipcodes:" , time_taken,"seconds.")
+    ```
+
+    It took lesser than what we had anticipated. I would say it is significantly lesser as essentially, since we're dealing with seconds, this difference can be seen as significant. 
+
+    c. 
+    ```{python}
+    # reading .prj
+    from pyproj import CRS
+
+    with open("/Users/kishikamahajan/Desktop/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.prj", "r") as prj_file:
+        prj_text = prj_file.read()
+        crs = CRS.from_wkt(prj_text)
+
+    print(f"The CRS of the file is {crs}")  
+    ```
+
+    The units in the prj file are degrees - 0.017453292519943295. 
+    This in miles will be approximately 0.310281 miles.
 5. 
-    a.
+    a. 
+    ```{python}
+    zips_texas_centroids = zips_texas_centroids.to_crs(epsg=2272)
+    zips_withhospital_centroids = zips_withhospital_centroids.to_crs(epsg=2272)
+
+    nearest_hospitals = gpd.sjoin_nearest(
+    zips_texas_centroids, 
+    zips_withhospital_centroids, 
+    how='inner', 
+    distance_col="distance")
+
+    nearest_hospitals['distance_miles'] = nearest_hospitals['distance'] / 1609.34
+    ```
+
     b.
-    c.
-    
+    ```{python}
+    import altair as alt
+
+    average_distance = nearest_hospitals.groupby('ZIP_CD')['distance_miles'].mean().reset_index()
+
+    average_distance.rename(columns={'distance_miles': 'average_distance_miles'}, inplace=True)
+
+    overall_average_distance = nearest_hospitals['distance_miles'].mean()
+
+    # Print the overall average distance
+    print(f"The overall average distance to the nearest hospital is {overall_average_distance:.2f} miles.")
+    ```
+
+    The number somehow make sense but ideally, we would expect the distance to be even smaller as we would expect that there are hospitals quite nearby from each zipcode. 
+
+    c. Plotting value for each zipcode
+
+    ```{python}
+    alt.Chart(average_distance).mark_bar().encode(
+        alt.X("average_distance_miles" , title = "Average distance in miles"),
+        alt.Y("ZIP_CD" , title = "Zipcodes")
+    )
+    ```
+
 ## Effects of closures on access in Texas (15 pts)
 
 1. 
+```{python}
+closures_by_zipcode = valid_closures.groupby('ZIP_CD').size().reset_index(name="count")
+
+zips_texas_centroids["ZCTA5"] = zips_texas_centroids["ZCTA5"].astype(str)
+closures_by_zipcode["ZIP_CD"] = closures_by_zipcode["ZIP_CD"].astype(str)
+
+texas_closures = closures_by_zipcode.merge(
+    zips_texas_centroids, 
+    left_on='ZIP_CD', 
+    right_on='ZCTA5',  
+    how='inner' 
+)
+
+texas_closures.head()
+```
+
 2. 
 3. 
 4. 
 
 ## Reflecting on the exercise (10 pts) 
+Partner 1: 
+The first pass approach for identifying hospital closure could be a little misleading because of the following reasons:
+1. Usually data is collected as per a pre-decided schedule. It may often so happen that closures may not directly be recorded in the dataset. To tackle this, a new system of data append should be placed in order to make sure there is no data left unrecorded.
+2. Temporary vs Permanent closures: Some hospitals may become non-operational for short term maybe due to reconstruction, financial recovery etc. Thus, measuring the change in number of active hospitals could potentially overestimate the closed number of hospitals.
+3. There might be changes to corresponding features of hospitals like unique identifier maybe because of merger &. Acquisition which could also lead to misleading results. We might have to keep correcting for such changes.
+4. If hospital locations are incorrectly geocoded or zip-code boundaries have shifted, closures might be inaccurately attributed to certain areas. Ensuring that location data is updated and verified can mitigate this issue.
+5. Instead of manually collecting data, we could also potentially deploy new aged machine learning methods to keep a track of hospital activity improving reliability of closure data.
+
+Partner 2: 
+Identifying zip codes affected hospital closure is a good start point when we have such a large dataset in hand. However, it may sometime miss to give a true reality of hospital closures given that there could be various factors affecting closure of hospitals:
+First of all, not all ZIP codes are uniquely distributed in terms of resources and population. Areas with higher populations, older adults, or those with chronic health needs may experience a greater impact from closures. Adjusting for these factors can help prioritise areas with higher healthcare needs.Secondly, ZIP codes have a geographical factor and its impact on public health structurally attached to it. Some places are more prone to public diseases and hence demand more hospitals. While some area would demand less and have lesser footfall relatively. Thus, geographical factors can have huge impact on hospital operations.
+Transportation and Accessibility: Evaluate the availability of public transportation or other means of reaching nearby hospitals, especially in rural areas where closures may significantly reduce accessible options. A measure that considers public transit access, car ownership rates, or alternative transportation services could improve the assessment.
+Socioeconomic Indicators: Socioeconomic factors, such as income levels or insurance coverage, influence access to healthcare. Low-income areas may face greater challenges with closures, as residents may have fewer alternatives. Including socioeconomic indicators can highlight where closures are likely to exacerbate existing health disparities.
+
+Thus overall we need to also include geographical factors, deomgraphy,  economic distribution, transportation to assess the real reasoning for hospital closures.
